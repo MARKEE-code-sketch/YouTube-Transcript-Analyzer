@@ -25,3 +25,4 @@ python-dotenv
 numpy
 scikit-learn
 torch
+streamlit
