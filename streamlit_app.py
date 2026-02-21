@@ -7,6 +7,12 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 import re
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(
@@ -46,13 +52,29 @@ def fetch_transcript(video_id):
         return None
 
 
+@st.cache_resource
+def get_embeddings_model():
+    """Cache the embeddings model to avoid reloading"""
+    return HuggingFaceEmbeddings(model_name="all-mpnet-base-v2")
+
+
 def build_vector_store(transcript):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.create_documents([transcript])
 
-    embeddings = HuggingFaceEmbeddings(model_name="all-mpnet-base-v2")
+    embeddings = get_embeddings_model()
     vector_store = FAISS.from_documents(chunks, embeddings)
     return vector_store
+
+
+@st.cache_resource
+def get_llm_model():
+    """Cache the LLM model to avoid reloading"""
+    llm = HuggingFaceEndpoint(
+        repo_id="mistralai/Mistral-7B-Instruct-v0.2",
+        task="text-generation"
+    )
+    return ChatHuggingFace(llm=llm)
 
 
 def create_rag_chain(vector_store):
@@ -73,12 +95,7 @@ Question:
         input_variables=["context", "question"]
     )
 
-    llm = HuggingFaceEndpoint(
-        repo_id="mistralai/Mistral-7B-Instruct-v0.2",
-        task="text-generation"
-    )
-
-    model = ChatHuggingFace(llm=llm)
+    model = get_llm_model()
 
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
