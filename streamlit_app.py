@@ -71,9 +71,13 @@ def build_vector_store(transcript):
 def get_llm_model():
     """Cache the LLM model to avoid reloading"""
     llm = HuggingFaceEndpoint(
-        repo_id="mistralai/Mistral-7B-Instruct-v0.2",
-        task="text-generation"
-    )
+    repo_id="mistralai/Mistral-7B-Instruct-v0.2",
+    task="text-generation",
+    max_new_tokens=512,
+    temperature=0.2,
+    top_p=0.9,
+    repetition_penalty=1.1
+)
     return ChatHuggingFace(llm=llm)
 
 
