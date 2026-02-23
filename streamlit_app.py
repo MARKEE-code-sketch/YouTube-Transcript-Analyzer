@@ -59,7 +59,7 @@ def get_embeddings_model():
 
 
 def build_vector_store(transcript):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1500,chunk_overlap=300)
     chunks = splitter.create_documents([transcript])
 
     embeddings = get_embeddings_model()
@@ -82,21 +82,30 @@ def get_llm_model():
 
 
 def create_rag_chain(vector_store):
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+    retriever = vector_store.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k": 8}
+)
 
     prompt = PromptTemplate(
-        template="""
-You are a helpful assistant.
-Answer ONLY using transcript context.
-If context is insufficient, say you don't know.
+    template="""
+    You are analyzing a YouTube podcast transcript.
 
-Context:
-{context}
+    Use the provided context to answer.
 
-Question:
-{question}
-""",
+    If the topic is mentioned indirectly,
+    infer from surrounding conversation.
+    Also make sure to not stop the answer in middle,
+    always complete the whole sentence
+
+    Only say "not discussed" if truly absent.
+
+        Context:  {context}
+
+        Question:{question}
+        """,
         input_variables=["context", "question"]
+    
     )
 
     model = get_llm_model()
